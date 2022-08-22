@@ -1,0 +1,128 @@
+﻿J005：AWKcc - awk-to-C transcompiler (PART A)
+
+A. make awkcc.exe
+
+1. 下載原始碼 awkcc-main.zip
+
+   https://github.com/nokia/awkcc
+
+2. 抽取 awkcc-main.zip\awkcc-main\1988\orig\awkcc\*           -> R:\_W_\awkcc\
+   抽取 awkcc-main.zip\awkcc-main\2011\awkcc20\awkcc\awk.lx.c -> R:\_W_\awkcc\
+
+3. 下載 yacc-1.9.3-1.mingw32.zip
+
+   https://sourceforge.net/projects/tiny-cobol/files/misc/yacc-1.9.3-1.mingw32.zip
+
+4. 抽取 yacc-1.9.3-1.mingw32.zip\bin\yacc193.exe -> R:\_W_\awkcc\
+
+5. 備份原檔 -> R:\_W_\awkcc\prog\
+
+   mv awk.lx.l
+   mv awkcc.sh.basic
+   cp funcs.h
+   mv makefile
+   cp misc.c
+   cp type.c
+   mv y.tab.h
+
+   cp 表補釘
+   flex 產生檔：awk.lx.c 以複製，故 awk.lx.l 沒用到
+   y.tab.h 呼叫 yacc 會自動產生，token # 不一致 故備份留存。
+
+6. 編寫標頭檔：stdarg.h -> R:\_W_\awkcc\
+
+   /* stdarg.h */
+
+   #ifndef _VA_LIST_DEFINED
+   #define _VA_LIST_DEFINED
+   typedef char *va_list;
+   #endif
+
+   #define _INTSIZEOF(n) ((sizeof(n) + sizeof(int) - 1) & ~(sizeof(int) - 1))
+
+   #define va_dcl va_list va_alist;
+   #define va_start(ap) ap = (va_list)&va_alist
+   #define va_arg(ap,t) ( *(t*)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) )
+   #define va_end(ap) ap = (va_list)0
+
+7.1 PATCH - funcs.h LINE_14
+
+   //extern uchar *malloc();
+   //extern uchar *calloc();
+   //extern uchar *realloc();
+     extern void *malloc();
+     extern void *calloc();
+     extern void *realloc();
+
+7.2 PATCH - misc.c LINE_15
+
+   //#include <varargs.h>
+     #include "stdarg.h"
+
+7.3 PATCH - type.c
+
+   LINE_182
+   //uchar *malloc();
+     void *malloc();
+
+   LINE_653
+   //for (tmp=winner->narg[3]; tmp && strcmp(s, tmp->s); tmp=tmp->nnext)
+     for (tmp=winner->narg[3]; tmp && strcmp((const char*)s, tmp->s); tmp=tmp->nnext)
+
+7.4 編碼 makefile
+
+   CC=gcc
+   CFLAGS=-O
+   LIBS=-lm
+   YFLAGS=-d
+   LFLAGS=-l
+   TARG=awk.g.o awk.lx.o main.o getopt.o prefuncall.o \
+        comp.o print.o arrstack.o node.o walk.o write.o \
+        type.o symtab.o stack.o tempvar.o emitstmt.o \
+        emitfunc.o emitppmm.o misc.o fix.o printop.o emit.o
+
+   awkcc.exe: $(TARG)
+       $(CC) $(CFLAGS) -o awkcc.exe $(TARG) $(LIBS)
+       strip awkcc.exe
+
+   clean:
+       rm -f *.o
+
+8.1 產生 awk.g.c y.tab.h
+
+   R:\_W_\awkcc>set tmpdir=.
+
+   R:\_W_\awkcc>yacc193.exe -d awk.g.y > yacc.log 2>&1
+
+   ren y.tab.c awk.g.c
+
+8.2 產生 awkcc.exe
+
+   進入 MSYS
+
+   juju@SCORPIUS ~
+   $ cd /r/_W_/awkcc
+
+   juju@SCORPIUS /r/_W_/awkcc
+   $ make awkcc.exe > mk-exe.log 2>&1
+
+   juju@SCORPIUS /r/_W_/awkcc
+   $ make clean
+   rm -f *.o
+
+8.3 安裝：
+
+   md r:\awkcc\bin
+   mv awkcc.exe r:\awkcc\bin
+ 
+8.4 編寫 awk.sh.bat -> r:\awkcc\bin
+
+   set HEADERDIR=r:\awkcc\include
+   set AWKLIB=r:\awkcc\lib\libAWK.a
+   set MATHLIB=-lm
+
+   gcc -O -I%HEADERDIR% -o %2 %1 %AWKLIB% %MATHLIB%
+   strip %2
+   del awker.c
+
+9. (To Be Continued)
