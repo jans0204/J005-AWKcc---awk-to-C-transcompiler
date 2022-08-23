@@ -1,0 +1,124 @@
+﻿J005：AWKcc - awk-to-C transcompiler (PART B)
+
+B. make libAWK.a
+
+1. 抽取 awkcc-main.zip\awkcc-main\1988\orig\lib -> R:\_W_\lib\
+
+2. 備份原檔 -> R:\_W_\lib\prog\
+
+   cp awkrun.c
+   cp ear.h
+   mv makefile
+   cp misc.c
+   cp xprintf.c
+   cp y.tab.h
+
+   cp 表補釘。
+   
+3. 複製：stdarg.h
+
+   copy R:\_W_\awkcc\stdarg.h R:\_W_\lib\
+
+4.1 PATCH - ear.h LINE_55
+
+   //extern char *malloc(), *realloc(), *calloc();
+     extern void *malloc(), *realloc(), *calloc();
+
+4.2 PATCH - awkrun.c
+
+   LINE_98
+   //extern int fpecatch();
+     extern void fpecatch();
+
+   LINE_716
+   //fpecatch()
+     void fpecatch()
+
+4.3 PATCH - misc.c LINE_129
+
+   //#include <varargs.h>
+     #include "stdarg.h"
+
+4.4 PATCH - xprintf.c LINE_13
+
+   //#include <varargs.h>
+     #include "stdarg.h"
+
+4.5 PATCH - y.tab.h 依據 R:\_W_\awkcc\y.tab.h 修正 token id
+
+   #define FINAL 268 
+   #define DOT 269
+   #define ALL 270
+   #define CCL 271
+   #define NCCL 272
+   #define CHAR 273
+   #define OR 274
+   #define STAR 275
+   #define QUEST 276
+   #define PLUS 277
+
+   #define CAT 342   // same
+
+4.6 編碼 makefile
+
+   CC=gcc
+   CFLAGS=-O
+
+   SOURCES=misc.o lines.o make_str.o copystr.o index.o xprintf.o \
+       isreg.o awkrun.o awkmod.o assignvars.o awkerr.o clear_htb.o \
+       free_array.o clearctest.o delete.o docomp.o docompN.o \
+       regexp.o newb.o awkparse.o filedrop.o fileget.o getd.o \
+       getrec.o gsub.o n_insert.o s_insert.o insert.o make_array.o \
+       make_buckets.o make_elem.o make_var.o member.o number.o \
+       opennext.o pipeget.o printD0.o print_var.o resize.o \
+       rgetrec.o setctest.o split.o split2.o split3.o splitrec.o \
+       strsplitrec.o resplitrec.o sresize.o substr.o
+
+   libAWK.a: $(SOURCES)
+       ar -q libAWK.a $(SOURCES)
+       ranlib libAWK.a
+
+   clean:
+       rm -f *.o
+
+5.1 產生 libAWK.a
+
+   進入 MSYS
+
+   $ cd /r/_W_/lib
+   $ make > make.log 2>&1
+   $ nm -s libAWK.a > libAWK.idx
+   $ make clean
+   rm -f *.o
+
+5.2 安裝：
+
+   md R:\awkcc\lib
+   mv awkcc.exe R:\awkcc\lib
+   md R:\awkcc\include
+   cp *.h R:\awkcc\include
+   del R:\awkcc\include\stdarg.h
+
+6. 測試：
+
+   下載 Hello_world_Text.awk -> R:\
+   https://rosettacode.org/wiki/Hello_world/Text#AWK
+
+   R:\set path=r:\awkcc\bin;%path%
+
+   R:\>awkcc Hello_world_Text.awk
+   R:\>set HEADERDIR=r:\awkcc\include
+   R:\>set AWKLIB=r:\awkcc\lib\libAWK.a
+   R:\>set MATHLIB=-lm
+   R:\>gcc -O -Ir:\awkcc\include -o a.out awker.c r:\awkcc\lib\libAWK.a -lm
+   R:\>strip a.out
+   R:\>del awker.c
+
+   R:\>a.out
+   Hello world!
+
+   R:\>
+
+7. (END)
+
+   https://github.com/jans0204/J005-AWKcc---awk-to-C-transcompiler
